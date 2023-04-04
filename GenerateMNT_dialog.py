@@ -49,14 +49,11 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         
-        
-        
-        # TO DO : fonction pour init les champs ?
         self.outFile.setFilter("*.tif")
         
-        self.debugButton.clicked.connect(self.onRunClicked)
+        self.pushRunButton.clicked.connect(self.onRunClicked)
         
-        self.pushCancel.clicked.connect(self.onCancelClicked)
+        self.pushCancelButton.clicked.connect(self.onCancelClicked)
     
     def initTabs(self):
         #global progressFeedback, paramsModel
@@ -73,7 +70,6 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
 
     
     def onRunClicked(self):
-        print("RUN")
         
         self.context.setFeedback(self.feedback)
 
@@ -85,13 +81,6 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
         in_grid = self.gridLayer.filePath()
         in_folder = self.folderMNT.filePath()
 
-        # test valeur input
-        # if not in_extent_zone:
-            # self.feedback.print_func("Paramètre manquant : zone d'étude")
-        # if not in_grid:
-            # utils.user_error("Paramètre manquant : dalles des MNT")
-        # if not in_folder:
-            # utils.user_error("Paramètre manquant : Dossier de fichiers MNT")
         out_path = QgsProcessing.TEMPORARY_OUTPUT
         if self.outFile.filePath():
             out_path = self.outFile.filePath()
@@ -124,3 +113,4 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
         if layer_path in existing_layers_paths:
             id_to_remove = existing_layers_ids[existing_layers_paths.index(layer_path)]
             QgsProject.instance().removeMapLayer(id_to_remove)
+            
