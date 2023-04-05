@@ -196,7 +196,7 @@ p, li { white-space: pre-wrap; }
          </font>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="tabMain">
          <attribute name="title">
@@ -240,7 +240,7 @@ p, li { white-space: pre-wrap; }
              <string/>
             </property>
             <property name="storageMode">
-             <enum>QgsFileWidget::GetFile</enum>
+             <enum>QgsFileWidget::SaveFile</enum>
             </property>
             <property name="relativeStorage">
              <enum>QgsFileWidget::Absolute</enum>

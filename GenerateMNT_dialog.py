@@ -28,9 +28,10 @@ from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 from . import GenerateMNT_provider
 from .qgis_lib_mc import utils, qgsUtils, log, qgsTreatments, feedbacks
-from qgis.core import QgsApplication, QgsProcessingContext, QgsProject, QgsProcessing
+from qgis.core import QgsApplication, QgsProcessingContext, QgsProject, QgsProcessing, QgsProcessingAlgRunnerTask
 from qgis.gui import QgsMapCanvas
-
+import processing
+from functools import partial
 
 # This loads your .ui file so that PyQt can populate your plugin with the elements from Qt Designer
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -67,6 +68,8 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
         self.progressBar.setValue(0)
         self.txtLog.clear()
         self.tabWidget.setCurrentWidget(self.tabMain)
+        
+        self.task = None
 
     
     def onRunClicked(self):
@@ -92,16 +95,22 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
                        GenerateMNT_provider.GenerateMNTAlgorithm.GRID_INPUT : in_grid,
                        GenerateMNT_provider.GenerateMNTAlgorithm.FOLDER_MNT_FILES : in_folder,
                        GenerateMNT_provider.GenerateMNTAlgorithm.OUTPUT_RASTER_MNT: out_path}
-        res = qgsTreatments.applyProcessingAlg("GenerateMNT","GenerateMNTfromRGEALTI",parameters,onlyOutput=False,context=self.context,feedback=self.feedback)
+        # res = qgsTreatments.applyProcessingAlg("GenerateMNT","GenerateMNTfromRGEALTI",parameters,onlyOutput=False,context=self.context,feedback=self.feedback)
+        # rasterLayer = qgsUtils.loadRasterLayer(res['RasterMNT'])
+        # QgsProject.instance().addMapLayer(rasterLayer)       
+        alg = QgsApplication.processingRegistry().algorithmById("GenerateMNT:GenerateMNTfromRGEALTI")
+        self.task = QgsProcessingAlgRunnerTask(alg, parameters, self.context, self.feedback)
+        self.task.executed.connect(partial(self.task_finished, self.context,'RasterMNT'))
+        QgsApplication.taskManager().addTask(self.task)
         
         
-        rasterLayer = qgsUtils.loadRasterLayer(res['RasterMNT'])
-        QgsProject.instance().addMapLayer(rasterLayer)
         
             
     
     def onCancelClicked(self):
         self.close()
+        if self.task:
+            self.task.cancel()
         
         
     def testRemoveLayer(self, layer_path):
@@ -114,3 +123,10 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
             id_to_remove = existing_layers_ids[existing_layers_paths.index(layer_path)]
             QgsProject.instance().removeMapLayer(id_to_remove)
             
+            
+    def task_finished(self, context, outputkey, successful, results):
+        if successful:
+            output_layer = qgsUtils.loadRasterLayer(results[outputkey])
+            if output_layer.isValid():
+                QgsProject.instance().addMapLayer(output_layer)
+        self.task = None
