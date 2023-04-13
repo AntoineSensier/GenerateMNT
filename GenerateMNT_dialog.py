@@ -28,7 +28,7 @@ from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
 from . import GenerateMNT_provider
 from .qgis_lib_mc import utils, qgsUtils, log, qgsTreatments, feedbacks
-from qgis.core import QgsApplication, QgsProcessingContext, QgsProject, QgsProcessing, QgsProcessingAlgRunnerTask
+from qgis.core import QgsApplication, QgsProcessingContext, QgsProject, QgsProcessing, QgsProcessingAlgRunnerTask, QgsMapLayerProxyModel
 from qgis.gui import QgsMapCanvas
 import processing
 from functools import partial
@@ -52,11 +52,15 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
         
         self.outFile.setFilter("*.tif")
         
+        self.extentLayerFile.clicked.connect(partial(self.select_file, "vector", self.mMapLayerComboBoxExtent))
+        self.gridLayerFile.clicked.connect(partial(self.select_file, "vector", self.mMapLayerComboBoxGrid))
+        self.mMapLayerComboBoxExtent.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.mMapLayerComboBoxGrid.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         self.pushRunButton.clicked.connect(self.onRunClicked)
         
         self.pushCancelButton.clicked.connect(self.onCancelClicked)
     
-    def initTabs(self):
+    def initConnectors(self):
         #global progressFeedback, paramsModel
         logConnector = log.LogConnector(self)
         logConnector.initGui()
@@ -70,49 +74,61 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
         self.tabWidget.setCurrentWidget(self.tabMain)
         
         self.task = None
+        self.taskRun = False
 
+    def initInterface(self):
+        self.txtLog.clear()
+        self.progressBar.setValue(0)
+        self.tabWidget.setCurrentWidget(self.tabMain)
     
     def onRunClicked(self):
-        
+        self.pushRunButton.setEnabled(False)
         self.context.setFeedback(self.feedback)
 
         # in_extent_zone = "D:\Donnees\Zone_est\emprise_est_Montpelleir_reproj.shp"
         # in_grid = "D:\Donnees\RGEALTI_2-0_1M_ASC_LAMB93-IGN69_D034_2022-12-16\RGEALTI\dalles.shp"
         # in_folder = "D:\Donnees\RGEALTI_2-0_1M_ASC_LAMB93-IGN69_D034_2022-12-16\RGEALTI\RGEALTI_MNT_1M_ASC_LAMB93_IGN69_D034_20230113"
         
-        in_extent_zone = self.extentLayer.filePath()
-        in_grid = self.gridLayer.filePath()
+        in_extent_zone = self.mMapLayerComboBoxExtent.currentLayer()
+        in_grid = self.mMapLayerComboBoxGrid.currentLayer()
         in_folder = self.folderMNT.filePath()
 
         out_path = QgsProcessing.TEMPORARY_OUTPUT
         if self.outFile.filePath():
             out_path = self.outFile.filePath()
         self.testRemoveLayer(out_path)
-        
-        self.tabWidget.setCurrentWidget(self.tabLog)
-        
-        parameters = { GenerateMNT_provider.GenerateMNTAlgorithm.EXTENT_ZONE : in_extent_zone,
-                       GenerateMNT_provider.GenerateMNTAlgorithm.GRID_INPUT : in_grid,
-                       GenerateMNT_provider.GenerateMNTAlgorithm.FOLDER_MNT_FILES : in_folder,
-                       GenerateMNT_provider.GenerateMNTAlgorithm.OUTPUT_RASTER_MNT: out_path}
-        # res = qgsTreatments.applyProcessingAlg("GenerateMNT","GenerateMNTfromRGEALTI",parameters,onlyOutput=False,context=self.context,feedback=self.feedback)
-        # rasterLayer = qgsUtils.loadRasterLayer(res['RasterMNT'])
-        # QgsProject.instance().addMapLayer(rasterLayer)       
-        alg = QgsApplication.processingRegistry().algorithmById("GenerateMNT:GenerateMNTfromRGEALTI")
-        self.task = QgsProcessingAlgRunnerTask(alg, parameters, self.context, self.feedback)
-        self.task.executed.connect(partial(self.task_finished, self.context,'RasterMNT'))
-        QgsApplication.taskManager().addTask(self.task)
-        
-        
-        
-            
+        self.taskRun = True
+        if in_extent_zone is not None and in_grid is not None and in_folder != "":
+            parameters = { GenerateMNT_provider.GenerateMNTAlgorithm.EXTENT_ZONE : in_extent_zone,
+                           GenerateMNT_provider.GenerateMNTAlgorithm.GRID_INPUT : in_grid,
+                           GenerateMNT_provider.GenerateMNTAlgorithm.FOLDER_MNT_FILES : in_folder,
+                           GenerateMNT_provider.GenerateMNTAlgorithm.OUTPUT_RASTER_MNT: out_path}
+            # res = qgsTreatments.applyProcessingAlg("GenerateMNT","GenerateMNTfromRGEALTI",parameters,onlyOutput=False,context=self.context,feedback=self.feedback)
+            # rasterLayer = qgsUtils.loadRasterLayer(res['RasterMNT'])
+            # QgsProject.instance().addMapLayer(rasterLayer)       
+            alg = QgsApplication.processingRegistry().algorithmById("GenerateMNT:GenerateMNTfromRGEALTI")
+            self.task = QgsProcessingAlgRunnerTask(alg, parameters, self.context, self.feedback)
+            self.task.executed.connect(partial(self.task_finished, self.context,'RasterMNT'))
+            QgsApplication.taskManager().addTask(self.task)
+        else:
+            self.feedback.pushWarning("Treatement failed")
+            if in_extent_zone is None:
+                self.feedback.pushWarning("Study zone input is missing")
+            if in_grid is None:
+                self.feedback.pushWarning("Grid input is missing")
+            if in_folder == "":
+                self.feedback.pushWarning("Folder input is missing")
+            self.tabWidget.setCurrentWidget(self.tabLog)
+            self.pushRunButton.setEnabled(True)   
+            self.taskRun = False
     
     def onCancelClicked(self):
-        self.close()
-        if self.task:
+        if self.taskRun:
             self.task.cancel()
-        
-        
+        else:
+            self.pushRunButton.setEnabled(True)
+            self.close()
+            
     def testRemoveLayer(self, layer_path):
         # List existing layers ids
         existing_layers_ids = [layer.id() for layer in QgsProject.instance().mapLayers().values()]
@@ -122,11 +138,36 @@ class GenerateMNTDialog(QtWidgets.QDialog, FORM_CLASS):
         if layer_path in existing_layers_paths:
             id_to_remove = existing_layers_ids[existing_layers_paths.index(layer_path)]
             QgsProject.instance().removeMapLayer(id_to_remove)
+               
+    def select_file(self, fileType, mapLayerComboBox):
+        qfd = QtWidgets.QFileDialog()
+        if fileType == "raster":
+            filt = self.tr("Sélectionner un fichier(*.tif)")
+        elif fileType == "vector":
+            filt = self.tr("Sélectionner un fichier(*.shp)")
             
-            
+        title = self.tr("Sélectionner un fichier")
+        f, _ = QtWidgets.QFileDialog.getOpenFileName(qfd, title, ".", filt)
+        if f != "" and f is not None:
+            if fileType == "raster":
+                layer = qgsUtils.loadRasterLayer(f)
+            elif fileType == "vector":
+                layer = qgsUtils.loadVectorLayer(f)
+            QgsProject.instance().addMapLayer(layer)
+            mapLayerComboBox.setLayer(layer)
+    
     def task_finished(self, context, outputkey, successful, results):
-        if successful:
+        if self.task.isCanceled():
+            self.progressBar.setValue(0)
+            self.feedback.pushWarning("Treatement canceled")
+            self.tabWidget.setCurrentWidget(self.tabLog)
+        elif bool(results): # elif successful:
             output_layer = qgsUtils.loadRasterLayer(results[outputkey])
             if output_layer.isValid():
                 QgsProject.instance().addMapLayer(output_layer)
-        self.task = None
+        else: # FAIL
+            self.feedback.pushWarning("Treatement failed")
+            self.tabWidget.setCurrentWidget(self.tabLog)
+        self.pushRunButton.setEnabled(True)
+        self.task.disconnect()
+        self.taskRun = False

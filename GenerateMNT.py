@@ -201,8 +201,9 @@ class GenerateMNTPlugin(object):
         if self.first_start == True:
             self.first_start = False
             self.dlg = GenerateMNTDialog()
-            
-        self.dlg.initTabs()
+            self.dlg.initConnectors()
+        
+        self.dlg.initInterface()     
         # self.dlg.initGui()    
         # show the dialog
         self.dlg.show()
