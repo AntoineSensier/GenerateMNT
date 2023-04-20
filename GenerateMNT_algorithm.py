@@ -56,13 +56,13 @@ class GenerateMNTAlgorithm(QgsProcessingAlgorithm):
     results = {}
     
     def initAlgorithm(self, config=None):
-        self.addParameter(QgsProcessingParameterFeatureSource(self.EXTENT_ZONE, self.tr('Extent zone'), [QgsProcessing.TypeVectorPolygon]))
+        self.addParameter(QgsProcessingParameterFeatureSource(self.EXTENT_ZONE, self.tr("Zone d'étude"), [QgsProcessing.TypeVectorPolygon]))
         
         self.addParameter(QgsProcessingParameterVectorLayer(self.GRID_INPUT, self.tr('dalles'), defaultValue=None))
         
-        self.addParameter(QgsProcessingParameterFile(self.FOLDER_MNT_FILES, self.tr('folder MNT ASC'), behavior=QgsProcessingParameterFile.Folder, fileFilter='Tous les fichiers (*.*)', defaultValue=None))
+        self.addParameter(QgsProcessingParameterFile(self.FOLDER_MNT_FILES, self.tr('Dossier de fichiers MNT ASC'), behavior=QgsProcessingParameterFile.Folder, fileFilter='Tous les fichiers (*.*)', defaultValue=None))
         
-        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT_RASTER_MNT, 'Raster MNT', createByDefault=True, defaultValue=None))
+        self.addParameter(QgsProcessingParameterRasterDestination(self.OUTPUT_RASTER_MNT, 'Fichier de sortie Raster MNT', createByDefault=True, defaultValue=None))
 
     def parseParams(self, parameters, context, feedback):
         source = self.parameterAsSource(parameters,self.EXTENT_ZONE,context)
@@ -146,7 +146,7 @@ class GenerateMNTAlgorithm(QgsProcessingAlgorithm):
             'EXTRA': '',
             'INPUT': outputs['ConstruireUnVecteurVirtuel']['OUTPUT'],
             'NODATA': None,
-            'OPTIONS': '',
+            'OPTIONS': 'COMPRESS=DEFLATE',
             'TARGET_CRS': layer.crs(),
             'OUTPUT': self.outputRasterMNT
         }
