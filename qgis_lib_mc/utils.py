@@ -49,7 +49,7 @@ def printLine(msg):
 def doNothing(msg):
     pass
 
-debug_flag=False
+debug_flag=True
 print_func = printLine
 #print_func = doNothing
 curr_language = "fr"
@@ -59,13 +59,22 @@ platform_sys = platform.system()
     
 
 class CustomException(Exception):
-
+    def __init__(self, message):
+        super().__init__(message)
+class UserError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+class InternalError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+class TodoError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
 
 def printDate(msg):
-    print_func ("[" + str(datetime.datetime.now()) + "] " + msg)
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print_func ("[" + date_str + "] " + msg)
     
 def debug(msg):
     if debug_flag:
@@ -75,7 +84,7 @@ def info(msg):
     printDate("<font color=\"black\">[info] " + msg + "</font>")
     
 def warn(msg):
-    printDate("<font color=\"orange\">[warn] " + html.escape(msg) + "</font>")
+    printDate("<font color=\"orange\">[warn] " + msg + "</font>")
     
 def mkBoldRed(msg):
     return "<b><font color=\"red\">" + msg + "</font></b>"
@@ -84,16 +93,19 @@ def error_msg(msg,prefix=""):
     printDate(mkBoldRed("[" + prefix + "] " + msg))
     
 def user_error(msg):
-    error_msg(msg,"user error")
-    raise CustomException(msg)
+    raise UserError(msg)
+    # error_msg(msg,"user error")
+    # raise CustomException(msg)
     
 def internal_error(msg):
-    error_msg(msg,"internal error")
-    raise CustomException(msg)
+    raise InternalError(msg)
+    # error_msg(msg,"internal error")
+    # raise CustomException(msg)
     
 def todo_error(msg):
-    error_msg(msg,"Feature not yet implemented")
-    raise CustomException(msg)
+    raise TodoError(msg)
+    # error_msg(msg,"Feature not yet implemented")
+    # raise CustomException(msg)
 
 class Section:
 
@@ -232,7 +244,23 @@ def is_integer(s):
         return True
     except ValueError:
         return False
-        
+       
+def castDict(d):
+    res = {}
+    for k,v in d.items():
+        if v is None or v == "None":
+            newVal = None
+        elif v in ["True","False"]:
+            newVal = eval(v)
+        elif v.isnumeric():
+            newVal = int(v)
+        else:
+            try:
+                newVal = float(v)
+            except ValueError:
+                newVal = v
+        res[k] = newVal
+    return res
         
 # Validity checkers
         
@@ -264,6 +292,12 @@ def checkDescr(item,prefix=None):
 
 # Subprocess utils
         
+def checkCmd(cmd):
+    try:
+        subprocess.call([cmd])
+    except FileNotFoundError:
+        raise UserError("Command " + str(cmd) + " does not exist")
+        
 def executeCmd(cmd_args):
     debug("command = " + str(cmd_args))
     p = subprocess.Popen(cmd_args,
@@ -285,5 +319,37 @@ def executeCmdAsScript(cmd_args):
     debug(str(new_args))
     ret = subprocess.call(new_args)
     debug("return code = " + str(ret))
+   
+   
+# Misc
+def getIntValues(nb_values,start=1,exclude_values=[]):
+    cpt = 0
+    currVal = start
+    res = []
+    while cpt < nb_values:
+        if currVal not in exclude_values:
+            res.append(currVal)
+            cpt += 1
+        currVal += 1
+    return res
     
-        
+    
+# Import checks
+
+def scipyIsInstalled():
+    try:
+        import scipy
+        # from scipy import ndimage
+        import_scipy_ok = True
+    except ImportError as e:
+        import_scipy_ok = False
+    return import_scipy_ok
+    
+def numpyIsInstalled():
+    try:
+        import numpy
+        # from scipy import ndimage
+        import_numpy_ok = True
+    except ImportError as e:
+        import_numpy_ok = False
+    return import_numpy_ok

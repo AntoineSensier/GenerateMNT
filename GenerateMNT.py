@@ -37,6 +37,7 @@ import inspect
 from qgis.core import QgsProcessingAlgorithm, QgsApplication
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.core import QgsProcessingAlgorithm, QgsApplication
+from .resources import *
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from .GenerateMNT_provider import GenerateMNTProvider

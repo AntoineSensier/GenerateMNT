@@ -43,16 +43,25 @@ SOURCES = \
 PLUGINNAME = GenerateMNT
 
 PY_FILES = \
-	__init__.py \
-	GenerateMNT.py 
+	*.py
 
-UI_FILES = 
+UI_FILES = \
+	*.ui
+	
+MD_FILES = \
+	*.md	
 
 EXTRAS = metadata.txt \
 	icon.png
 
-EXTRA_DIRS =
-
+EXTRA_DIRS = \
+	docs \
+	sample_data \
+	icons \
+	
+EXTRA_PY_DIRS = \
+	qgis_lib_mc \
+	
 COMPILED_RESOURCE_FILES = 
 
 PEP8EXCLUDE=pydev,resources.py,conf.py,third_party,ui
@@ -243,3 +252,19 @@ pep8:
 	@echo "-----------"
 	@echo "Ignored in PEP8 check:"
 	@echo $(PEP8EXCLUDE)
+
+archive:
+	rm -f $(PLUGINNAME).zip
+	rm -rf $(PLUGINNAME)
+	mkdir -p $(PLUGINNAME)
+	cp -vf $(PY_FILES) $(PLUGINNAME)
+	cp -vf $(UI_FILES) $(PLUGINNAME)
+	cp -vf $(MD_FILES) $(PLUGINNAME)
+	cp -vf $(EXTRAS) $(PLUGINNAME)
+	cp -vfr i18n $(PLUGINNAME)
+	$(foreach EXTRA_PY_DIR,$(EXTRA_PY_DIRS), mkdir $(PLUGINNAME)/$(EXTRA_PY_DIR);)
+	$(foreach EXTRA_PY_DIR,$(EXTRA_PY_DIRS), cp $(EXTRA_PY_DIR)/*.py $(PLUGINNAME)/$(EXTRA_PY_DIR);)
+	$(foreach EXTRA_DIR,$(EXTRA_DIRS), cp -R $(EXTRA_DIR) $(PLUGINNAME)/;)
+	$(foreach EXCLUDE_DIR,$(EXCLUDE_DIRS), rm -rf $(PLUGINNAME)/$(EXCLUDE_DIR);)
+	$(foreach EXCLUDE_FILE,$(EXCLUDE_FILES), rm -f $(PLUGINNAME)/$(EXCLUDE_FILE);)
+	zip -r $(PLUGINNAME).zip $(PLUGINNAME)

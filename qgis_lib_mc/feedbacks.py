@@ -37,30 +37,30 @@ from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtWidgets import QMessageBox
 
-# progressFeedback = None
+progressFeedback = None
 
-# def beginSection(msg):
-    # if progressFeedback:
-        # progressFeedback.beginSection(msg)
-    # else:
-        # utils.debug("No progress feedback")
+def beginSection(msg):
+    if progressFeedback:
+        progressFeedback.beginSection(msg)
+    else:
+        utils.debug("No progress feedback")
         
-# def endSection():
-    # if progressFeedback:
-        # progressFeedback.endSection()
-        # progressFeedback.setProgress(100)
+def endSection():
+    if progressFeedback:
+        progressFeedback.endSection()
+        progressFeedback.setProgress(100)
         
-# def setProgressText(text):
-    # if progressFeedback:
-        # progressFeedback.setProgressText(text)
+def setProgressText(text):
+    if progressFeedback:
+        progressFeedback.setProgressText(text)
         
-# def setSubText(text):
-    # if progressFeedback:
-        # progressFeedback.setSubText(text)
+def setSubText(text):
+    if progressFeedback:
+        progressFeedback.setSubText(text)
         
-# def endJob():
-    # if progressFeedback:
-        # progressFeedback.endJob()
+def endJob():
+    if progressFeedback:
+        progressFeedback.endJob()
   
 def tr(msg):
     return QCoreApplication.translate(None, msg)
@@ -139,21 +139,22 @@ class ProgressFeedback(QgsProcessingFeedback):
         return "<b><font color=\"red\">" + msg + "</font></b>"
         
     def error_msg(self,msg,prefix=""):
-        msg2 = "[%s] %s"%(prefix,msg)
-        self.printDate(self.mkBoldRed(msg2))
-        launchDialog(self.dlg,prefix,msg)
+        self.printDate(self.mkBoldRed("[" + prefix + "] " + msg))
         
-    def user_error(self,msg):
+    def user_error(self,msg,fatal=True):
         self.error_msg(msg,"user error")
-        raise utils.CustomException(msg)
+        if fatal:
+            raise utils.CustomException(msg)
         
-    def internal_error(self,msg):
+    def internal_error(self,msg,fatal=True):
         self.error_msg(msg,"internal error")
-        raise utils.CustomException(msg)
+        if fatal:
+            raise utils.CustomException(msg)
         
-    def todo_error(self,msg):
+    def todo_error(self,msg,fatal=True):
         self.error_msg(msg,"Feature not yet implemented")
-        raise utils.CustomException(msg)
+        if fatal:
+            raise utils.CustomException(msg)
         
     def reportError(self,error,fatalError=False):
         error_msg = str(error)
@@ -200,7 +201,7 @@ class ProgressFeedback(QgsProcessingFeedback):
         if str(fv) == 'inf':
             self.pushInfo("Unexpected value in progress bar : " + str(value))
         else:
-            self.progressBar.setValue(value)
+            self.progressBar.setValue(int(value))
         
     def setPercentage(self,percentage):
         pass
@@ -237,8 +238,9 @@ class ProgressFeedback(QgsProcessingFeedback):
     def saveLogAs(self):
         txt = self.dlg.txtLog.toPlainText()
         fname = qgsUtils.saveFileDialog(self.dlg,msg="Enregistrer le journal sous",filter="*.txt")
-        utils.writeFile(fname,txt)
-        self.pushIngo("Log saved to file '" + fname + "'")
+        if fname!="":
+            utils.writeFile(fname,txt)
+            self.pushInfo("Log saved to file '" + fname + "'")
         
     def myClearLog(self):
         self.dlg.txtLog.clear()

@@ -60,7 +60,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap>icons/logoINRAE.png</pixmap>
+         <pixmap resource="resources.qrc">:/plugins/generatemnt/icons/logoINRAE.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
@@ -88,7 +88,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap>icons/logoTetis.png</pixmap>
+         <pixmap resource="resources.qrc">:/plugins/generatemnt/icons/logoTetis.png</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
@@ -334,8 +334,8 @@ p, li { white-space: pre-wrap; }
                <string>...</string>
               </property>
               <property name="icon">
-               <iconset>
-                <normaloff>:/plugins/BioDispersal/icons/debug_icon/mActionAnnotation.svg</normaloff>:/plugins/BioDispersal/icons/debug_icon/mActionAnnotation.svg</iconset>
+               <iconset resource="resources.qrc">
+                <normaloff>:/plugins/generatemnt/icons/debug_icon/mActionAnnotation.svg</normaloff>:/plugins/generatemnt/icons/debug_icon/mActionAnnotation.svg</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -354,8 +354,8 @@ p, li { white-space: pre-wrap; }
                <string>...</string>
               </property>
               <property name="icon">
-               <iconset>
-                <normaloff>:/plugins/BioDispersal/icons/mActionFileSave.svg</normaloff>:/plugins/BioDispersal/icons/mActionFileSave.svg</iconset>
+               <iconset resource="resources.qrc">
+                <normaloff>:/plugins/generatemnt/icons/debug_icon/mActionFileSave.svg</normaloff>:/plugins/generatemnt/icons/debug_icon/mActionFileSave.svg</iconset>
               </property>
               <property name="autoRaise">
                <bool>true</bool>
@@ -371,8 +371,8 @@ p, li { white-space: pre-wrap; }
                <string>...</string>
               </property>
               <property name="icon">
-               <iconset>
-                <normaloff>:/plugins/BioDispersal/icons/iconClearConsole.svg</normaloff>:/plugins/BioDispersal/icons/iconClearConsole.svg</iconset>
+               <iconset resource="resources.qrc">
+                <normaloff>:/plugins/generatemnt/icons/debug_icon/iconClearConsole.svg</normaloff>:/plugins/generatemnt/icons/debug_icon/iconClearConsole.svg</iconset>
               </property>
               <property name="autoRaise">
                <bool>true</bool>
@@ -409,6 +409,5 @@ p, li { white-space: pre-wrap; }
    <header>qgsmaplayercombobox.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
  <connections/>
 </ui>

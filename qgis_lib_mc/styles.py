@@ -36,12 +36,14 @@ from qgis.core import (QgsColorRampShader,
                        QgsPalettedRasterRenderer,
                        QgsSingleBandPseudoColorRenderer,
                        QgsGraduatedSymbolRenderer,
+                       QgsFillSymbol,
                        QgsStyle,
                        QgsSymbol,
                        QgsSimpleFillSymbolLayer,
                        QgsRendererCategory,
                        QgsCategorizedSymbolRenderer,
-                       QgsRendererRange)
+                       QgsRendererRange,
+                       QgsRenderContext)
                        
 from . import utils, qgsUtils
 
@@ -55,7 +57,7 @@ greenCol = QColor(greenHex)
 singleColorRampList = [ 'Blues', 'Greens', 'Oranges', 'Purples', 'Reds' ]
 
 colorsIndPol = ['#1A9641', '#8ACC62', '#DBF09E','#FEDF9A', '#F59053', '#D7191C']
-
+valuesIndPol = [0,1,2,3,4,5]
 
 def getDefaultStyle():
     return QgsStyle.defaultStyle()
@@ -78,8 +80,8 @@ def mkColorRamp(color,invert=False):
         colorRamp.invert()
     return colorRamp
     
-def getGradientColorRampRdYlGn():
-    return mkColorRamp('RdYlGn',invert=True)
+def getGradientColorRampRdYlGn(invert=True):
+    return mkColorRamp('RdYlGn',invert=invert)
     
 def getRandomSingleColorRamp():
     rampName = random.choice(singleColorRampList)
@@ -90,7 +92,7 @@ def setRenderer(layer,renderer):
         utils.internal_error("Could not create renderer")
     layer.setRenderer(renderer)
     utils.info("about to repaint")
-    layer.triggerRepaint()
+    layer.triggerRepaint()    
     
 # Vector utilities
 
@@ -104,21 +106,33 @@ def mkGraduatedRenderer(layer,fieldname,color_ramp,nb_classes=5,classif_method=Q
     # renderer.setClassificationMethod(classif)
     return renderer
     
-def setGraduatedStyle(layer,fieldname,color_ramp_name):
-    color_ramp = mkColorRamp(color_ramp_name)
-    renderer = mkGraduatedRenderer(layer,fieldname,color_ramp)
+def setGraduatedStyle(layer,fieldname,color_ramp_name,invert_ramp=False,
+        classif_method=QgsGraduatedSymbolRenderer.Jenks,invert_ranges=False):
+    color_ramp = mkColorRamp(color_ramp_name,invert=invert_ramp)
+    renderer = mkGraduatedRenderer(layer,fieldname,color_ramp,classif_method=classif_method)
+    ranges = renderer.ranges()
+    low1, low2 = ranges[0].lowerValue(), ranges[-1].lowerValue()
+    if invert_ranges and low1 < low2:
+        nb_ranges = len(ranges)
+        loop_range = range(0,nb_ranges)
+        for i in loop_range:
+            renderer.moveClass(0,nb_ranges-(i+1))
     setRenderer(layer,renderer)
     
     
 def setGreenGraduatedStyle(layer,fieldname):
-    color_ramp = mkColorRamp('Greens')
-    renderer = mkGraduatedRenderer(layer,fieldname,color_ramp)
-    setRenderer(layer,renderer)
+    setGraduatedStyle(layer,fieldname,'Greens')
+    # color_ramp = mkColorRamp('Greens')
+    # renderer = mkGraduatedRenderer(layer,fieldname,color_ramp,classif_method=classif_method)
+    # setRenderer(layer,renderer)
     
-def setRdYlGnGraduatedStyle(layer,fieldname):
-    color_ramp = mkColorRamp('RdYlGn')
-    renderer = mkGraduatedRenderer(layer,fieldname,color_ramp)
-    setRenderer(layer,renderer)
+def setRdYlGnGraduatedStyle(layer,fieldname,invert_ramp=False,
+        classif_method=QgsGraduatedSymbolRenderer.Jenks,invert_ranges=False):
+    setGraduatedStyle(layer,fieldname,'RdYlGn',invert_ramp=invert_ramp,
+        classif_method=classif_method,invert_ranges=invert_ranges)
+    # color_ramp = mkColorRamp('RdYlGn')
+    # renderer = mkGraduatedRenderer(layer,fieldname,color_ramp,classif_method=classif_method)
+    # setRenderer(layer,renderer)
     
 def setCustomClasses(layer,renderer,class_bounds):
     nb_bounds = len(class_bounds)
@@ -144,7 +158,7 @@ def setCustomClassesDSFL(layer,fieldname):
     renderer = mkGraduatedRenderer(layer,fieldname,color_ramp,nb_classes=5)
     setCustomClasses(layer,renderer,class_bounds)
     setRenderer(layer,renderer)
-    
+
 def setCustomClassesInd_Pol_Category(layer,fieldname,class_bounds):
     categories = []
     for i in range(len(class_bounds)):
@@ -172,13 +186,58 @@ def setCustomClassesInd_Pol_Graduate(layer,fieldname,class_bounds):
             symbol.changeSymbolLayer(0, symbol_layer)
         if i == len(class_bounds)-1: # dernier élément
             maxValue = layer.maximumValue(layer.fields().indexOf(fieldname))
-            category = QgsRendererRange(class_bounds[i],maxValue,symbol,"> "+str(class_bounds[i]))
+            category = QgsRendererRange(class_bounds[i],maxValue,symbol,"> "+str(round(class_bounds[i])))
         else:
-            category = QgsRendererRange(class_bounds[i],class_bounds[i+1],symbol,str(class_bounds[i])+" - "+str(class_bounds[i+1]))
+            category = QgsRendererRange(class_bounds[i],class_bounds[i+1],symbol,str(round(class_bounds[i]))+" - "+str(round(class_bounds[i+1])))
         categories.append(category)
     renderer = QgsGraduatedSymbolRenderer(fieldname, categories)
     setRenderer(layer,renderer)    
+
+def getQuantileBounds(layer, fieldname, nb_classes=5,classif_method=QgsGraduatedSymbolRenderer.Quantile, SupZero=True, lastBounds=None):
+    if SupZero:
+        layer.setSubsetString('"'+fieldname+'">0')
+    color_ramp = mkColorRamp('RdYlGn',invert=True)
+    renderer = mkGraduatedRenderer(layer,fieldname,color_ramp, nb_classes, classif_method)
+    bounds = []
+    for r in renderer.ranges():
+        bounds.append((r.lowerValue()))#append(round((r.lowerValue())))
     
+    if SupZero:
+        layer.setSubsetString('')
+        bounds.pop(0) # on enlève la première limite basse (index 0), qui sera remplacée par le seuil 0
+        bounds = [0,0]+bounds # on ajoute 0 ,0 comme premières limites pour isoler ces valeurs
+    
+    if lastBounds: # remplacement du dernier seuil
+        bounds.pop() # en enlève le dernier seul
+        bounds.append(lastBounds) # ajoute le dernier seuil en paramètre
+    
+    return bounds
+
+def setRdYlGnGraduatedStyle2(layer,fieldname,nb_classes=5,classif_method=QgsGraduatedSymbolRenderer.Quantile):
+    color_ramp = mkColorRamp('RdYlGn',invert=True)
+    renderer = mkGraduatedRenderer(layer,fieldname,color_ramp, nb_classes, classif_method)
+    ctx = QgsRenderContext()
+    for symbol in renderer.symbols(ctx): # no border symbol
+        symbol.symbolLayer(0).setStrokeStyle(0)
+    
+    setRenderer(layer,renderer)    
+    
+def setRendererUniqueValues(layer,fieldname):
+    idx = layer.fields().indexOf(fieldname)
+    values = list(layer.uniqueValues(idx))
+    ranges = []
+    for cpt, v in enumerate(values):
+        lower = v - 0.5 if cpt == 0 else (v + values[cpt-1]) / 2
+        upper = v + 0.5 if cpt == len(values) - 1 else (values[cpt+1] + v) / 2
+        label = str(v)
+        range = QgsRendererRange(lower,upper,QgsFillSymbol(),label)
+        ranges.append(range)
+    # print("ranges = " +str(ranges))
+    renderer = QgsGraduatedSymbolRenderer (attrName=fieldname,ranges=ranges)
+    color_ramp = getGradientColorRampRdYlGn(invert=False)
+    renderer.updateColorRamp(color_ramp)
+    setRenderer(layer,renderer)
+     
 # Raster utilities
     
 def getValuesFromLayer3(layer):
@@ -250,6 +309,11 @@ def setRandomColorRasterRenderer(layer):
 def setRendererSBPCGnYlRd(layer):
     colorRamp = getGradientColorRampRdYlGn()
     shader = mkQuantileShaderFromColorRamp(layer,colorRamp)
+    setSBPCRasterRenderer(layer,shader)
+# SBPC = Single Band Pseudo Color - continuous
+def setRendererSBPCGnYlRdCont(layer):
+    colorRamp = getGradientColorRampRdYlGn()
+    shader = mkRasterShader(layer,colorRamp)
     setSBPCRasterRenderer(layer,shader)
     
 def mkRendererPalettedGnYlRd(layer):

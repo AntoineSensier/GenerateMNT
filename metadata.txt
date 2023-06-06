@@ -4,8 +4,8 @@
 
 [general]
 name=GenerateMNT
-qgisMinimumVersion=3.0
-description=generate MNT raster from RGE ALTI files
+qgisMinimumVersion=3.14
+description=generate MNT (DEM) raster from RGE ALTI files
 version=0.1
 author=Antoine Sensier, INRAE
 email=antoine.sensier@inrae.fr
