@@ -41,6 +41,7 @@ from qgis.core import QgsProcessingParameterFile
 from qgis.core import QgsVectorLayer
 from qgis.core import QgsProcessingParameterFeatureSource
 from qgis.core import QgsFeatureRequest
+from .qgis_lib_mc import utils, qgsUtils
 from qgis import processing
 import os
 
@@ -79,7 +80,7 @@ class GenerateMNTAlgorithm(QgsProcessingAlgorithm):
         outputs = {}
 
         self.parseParams(parameters,context,feedback)
-        
+         
         # Extraire par localisation
         temp_file_extract = QgsProcessingUtils.generateTempFilename('temp_file_extract.gpkg')
         alg_params = {
@@ -127,7 +128,9 @@ class GenerateMNTAlgorithm(QgsProcessingAlgorithm):
                         list_grids_raster.append(temp_path_folder+'/'+file)
                         break
             
-        
+        if len(list_grids_raster) == 0:
+            utils.internal_error("The extent zone intesect no grid")
+            
         # Construire un vecteur virtuel
         alg_params = {
             'INPUT': list_grids_raster,
