@@ -268,3 +268,4 @@ archive:
 	$(foreach EXCLUDE_DIR,$(EXCLUDE_DIRS), rm -rf $(PLUGINNAME)/$(EXCLUDE_DIR);)
 	$(foreach EXCLUDE_FILE,$(EXCLUDE_FILES), rm -f $(PLUGINNAME)/$(EXCLUDE_FILE);)
 	zip -r $(PLUGINNAME).zip $(PLUGINNAME)
+	rm -rf $(PLUGINNAME)
